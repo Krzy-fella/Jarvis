@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>JARVIS 3D Viewer</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #0a0a0a; }
+  #status { position: fixed; top: 10px; left: 10px; color: #0f0; font-family: monospace; z-index: 10; }
+</style>
+</head>
+<body>
+<div id="status">Waiting for scene data...</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 5, 5);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x404040));
+
+  camera.position.z = 5;
+
+  let currentMesh = null;
+
+  function clearScene() {
+    if (currentMesh) {
+      scene.remove(currentMesh);
+      currentMesh.geometry.dispose();
+      currentMesh.material.dispose();
+      currentMesh = null;
+    }
+  }
+
+  // Renders a very small vocabulary of shapes out of whatever JSON JARVIS
+  // sends: { "shape": "box"|"sphere"|"cone", "color": "#rrggbb", "size": n }
+  function renderModel(data) {
+    clearScene();
+    const size = data.size || 1;
+    const color = data.color || "#00ff88";
+    let geometry;
+    switch (data.shape) {
+      case "sphere":
+        geometry = new THREE.SphereGeometry(size, 32, 32);
+        break;
+      case "cone":
+        geometry = new THREE.ConeGeometry(size, size * 2, 32);
+        break;
+      default:
+        geometry = new THREE.BoxGeometry(size, size, size);
+    }
+    const material = new THREE.MeshStandardMaterial({ color });
+    currentMesh = new THREE.Mesh(geometry, material);
+    scene.add(currentMesh);
+    document.getElementById("status").textContent = "Rendering: " + JSON.stringify(data);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    if (currentMesh) {
+      currentMesh.rotation.x += 0.005;
+      currentMesh.rotation.y += 0.01;
+    }
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onmessage = (event) => renderModel(JSON.parse(event.data));
+  ws.onopen = () => { document.getElementById("status").textContent = "Connected. Waiting for scene data..."; };
+  ws.onclose = () => { document.getElementById("status").textContent = "Disconnected from JARVIS."; };
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
