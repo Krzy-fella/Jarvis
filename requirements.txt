@@ -1,0 +1,15 @@
+# AI providers (Gemini uses the OpenAI-compatible endpoint)
+openai>=1.40.0,<3
+anthropic>=0.34.0,<1
+ollama>=0.3.0,<1
+python-dotenv>=1.0.0,<2
+rich>=13.7,<15
+
+# HTTP and research
+requests>=2.32.0,<3
+ddgs>=9,<10
+
+# Local 3D server, including WebSocket support
+fastapi>=0.111.0,<1
+uvicorn>=0.30.0,<1
+websockets>=13,<17

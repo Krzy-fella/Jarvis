@@ -1,0 +1,6 @@
+# Optional voice mode; Linux PyAudio needs portaudio19-dev and Python headers.
+SpeechRecognition>=3.10.0,<4
+PyAudio>=0.2.14,<1
+pyttsx3>=2.90,<3
+edge-tts>=6.1.0,<8
+# Edge playback uses the system ffplay executable (ffmpeg), not playsound.
