@@ -10,11 +10,15 @@
   <div class="eyebrow">YOUR SPACE</div>
   <button class="nav active" id="conversation-nav"><span>◌</span> Conversation <span class="nav-dot"></span></button>
   <button class="nav" id="skills"><span>⌘</span> My capabilities</button>
-  <div class="sidebar-note"><span class="small-orb"></span><h3>Made for your world.</h3><p>Think it through. Build something.<br>Make the everyday easier.</p></div>
+  <section id="chat-panel" class="chat-panel" aria-label="Saved chats">
+    <div class="chat-panel-heading"><span class="eyebrow">YOUR CHATS</span><button id="select-chats" aria-label="Select chats">Select</button></div>
+    <div id="selection-bar" hidden><span id="selection-count">0 selected</span><div><button id="pin-selected">Pin</button><button id="unpin-selected">Unpin</button><button id="delete-selected">Delete</button><button id="done-selecting">Done</button></div></div>
+    <div id="chat-list"></div><p id="chat-empty">Your conversations will appear here.</p>
+  </section>
   <div class="profile"><span class="avatar">N</span><div><strong id="profile">Personal</strong><small>On this computer</small></div><span class="online-dot"></span></div>
 </aside>
 <main class="workspace glass">
-<header><div><span class="eyebrow">WORKSPACE</span><h2>Conversation <span class="pill">Private session</span></h2></div><div class="header-actions"><span class="connection"><i class="online-dot"></i><span id="connection">Connecting</span></span><button id="menu-button" class="icon-button" aria-label="Open interface menu" aria-expanded="false">☰</button></div>
+<header><div><span class="eyebrow">WORKSPACE</span><h2><span id="chat-title">New conversation</span> <span class="pill">Saved locally</span></h2></div><div class="header-actions"><button id="toggle-chats" class="icon-button" aria-label="Show saved chats" aria-expanded="false">◫</button><span class="connection"><i class="online-dot"></i><span id="connection">Connecting</span></span><button id="menu-button" class="icon-button" aria-label="Open interface menu" aria-expanded="false">☰</button></div>
 <div id="interface-menu" class="menu glass" hidden><strong>Your workspace</strong><button id="menu-new-chat">New conversation</button><button id="menu-skills">My capabilities</button><button data-mode="text">Terminal chat <span>↗</span></button><button data-mode="menu">Provider & voice menu <span>↗</span></button><div class="settings-section"><label for="approval-mode">Approval settings</label><select id="approval-mode"><option value="auto">Approve all commands in this session</option><option value="ask" selected>Seek my approval for all commands</option></select><small>Automatic approval lasts until JARVIS closes.</small></div><button id="show-memory">View saved memory</button><button id="forget-memory">Forget saved memory…</button><button id="toggle-speech" aria-pressed="false">Read replies aloud: off</button><button data-mode="exit">Quit JARVIS</button></div></header>
 <section id="scroll-area" class="scroll-area" aria-label="Conversation">
 <div id="welcome" class="welcome"><div class="orb-wrap"><div class="orb"></div><div class="orb-ring"></div></div><div class="eyebrow">A LITTLE CLARITY. A LOT OF POSSIBILITY.</div><h1>What’s on your mind?</h1><p>A space to explore ideas, get things done,<br>and make sense of what’s next.</p><div class="suggestions"><button data-prompt="Explain machine learning from the ground up."><span class="suggestion-icon">✧</span><strong>Explore an idea</strong><small>Make something complex feel simple</small><span class="arrow">↗</span></button><button data-prompt="Check which of your skills are ready to use on my computer."><span class="suggestion-icon">⌘</span><strong>Get something done</strong><small>Put your assistant to work</small><span class="arrow">↗</span></button></div></div>
@@ -23,4 +27,12 @@
 </section>
 <footer><div id="status" role="status">Connecting to your assistant…</div><form id="composer" class="composer"><label class="sr-only" for="message">Message JARVIS</label><textarea id="message" rows="1" maxlength="16000" placeholder="Ask anything. Let’s work it out." required></textarea><button type="submit" id="send" class="send" aria-label="Send message">↑</button></form><div class="footer-note"><span>JARVIS <span class="separator">/</span> <span id="provider">Ollama cloud</span></span><span>Enter to send <span class="separator">·</span> Shift + Enter for a new line</span></div></footer>
 </main></div>
+<div id="chat-context" class="chat-context glass" role="menu" aria-label="Chat actions" hidden>
+  <button role="menuitem" id="context-select">Select chats</button>
+  <button role="menuitem" id="context-all">Select all chats</button>
+  <button role="menuitem" id="context-pin">Pin selected chats</button>
+  <button role="menuitem" id="context-unpin">Unpin selected chats</button>
+  <button role="menuitem" id="context-delete" class="danger">Delete selected chats…</button>
+</div>
+<dialog id="delete-dialog"><form method="dialog"><h2>Delete conversations?</h2><p id="delete-description"></p><p>This removes their saved messages and linked recent memory. Saved notes remain.</p><div class="dialog-actions"><button value="cancel">Cancel</button><button id="confirm-delete" value="delete" class="danger">Delete chats</button></div></form></dialog>
 </body></html>
