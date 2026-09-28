@@ -69,7 +69,8 @@ Keep its terminal running. The private launch link contains a random session tok
 in its URL fragment; the page removes it from the URL and keeps it in tab storage.
 Don't share that launch link. No API keys are sent to the browser. Foreign origins
 are rejected. Tool actions follow your current session approval setting. Long tools run in a
-worker while the interface remains responsive. Tool output is shown on completion.
+worker while the interface remains responsive. Open **See execution process** below
+the reply for live activity; the final result also appears in the conversation.
 Closing the tab does not stop a running tool; keep the terminal open until it finishes.
 The API provider still receives your chat and relevant tool context.
 
@@ -81,6 +82,34 @@ The web UI uses local HTML/CSS/JavaScript, with no frontend build step or CDN.
 Its source is in `web/`, and its server is `web_chat.py`. The Figma draft was
 created, but Figma's Starter-plan tool limit prevented canvas design; the implemented
 interface is currently maintained in code.
+
+## Live execution monitor
+
+Click **See execution process** beneath a request/reply to open the glass panel on
+its right. It shows preparation, approval, running and completion/failure stages,
+the command or action, elapsed time, process ID and exit code when available.
+Foreground terminal and Kali commands stream stdout/stderr as complete lines arrive.
+Use **Follow** to keep the output scrolled to the bottom, or turn it off to read
+older lines. The panel works on narrow screens and closes with **×** or Escape.
+Final execution records are saved with their conversation; old chats created before
+this feature do not have execution records. Interrupted tasks are never replayed.
+
+Nmap's current phase percentage is parsed from its own timing messages; it can reset
+when a new scan phase begins. Direct `nmap` commands and the `kali_tool` Nmap action
+receive `--stats-every 2s` before approval unless a stats interval or `--resume` is
+already present. On POSIX, a private controlling terminal makes those updates work
+with older Nmap versions. Your terminal is not used for input. Shell pipelines,
+wrappers such as `sudo`, and explicit `--noninteractive` are left unchanged; their
+output may not include percentages. See [Nmap's timing output documentation](https://nmap.org/book/man-output.html).
+
+Tools without measurable progress show an activity indicator and elapsed time,
+not an estimated percentage. Other actions show their stage and final result;
+they do not expose internal substeps or live device/service output. Some programs
+buffer output. Detached background commands are marked as launched, not monitored
+to completion. The live log retains the last 16,000 characters; each command's
+final stdout/stderr retains its last 12,000 characters. Known secrets are redacted.
+Execution metadata is local and is not included in the model's conversation history.
+The normal final tool result is still provided to the model as before.
 
 ## Saved conversations
 
@@ -195,7 +224,8 @@ This does not install a JACK server or repair a missing/disconnected microphone.
 
 Terminal and Kali commands have a **3,830-second timeout (1 hour, 3 minutes, 50 seconds)**.
 Set `JARVIS_TOOL_TIMEOUT` in `.env` to change it. API/device calls keep shorter
-timeouts. Foreground output appears when the command finishes. In terminal mode, Ctrl+C interrupts waiting; a command may leave its own child processes running.
+timeouts. Terminal-mode foreground output appears when the command finishes; the web monitor
+streams foreground command output while it runs. In terminal mode, Ctrl+C interrupts waiting; a command may leave its own child processes running.
 Background mode runs detached and has no automatic timeout.
 
 Read the file before editing it. A second edit requires you to remove or rename the

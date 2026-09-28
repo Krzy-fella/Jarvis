@@ -9,6 +9,7 @@ import shutil
 import shlex
 import json
 import config
+import execution
 
 class UnsafeCommandError(Exception):
     """Raised when a command matches the destructive-command blacklist."""
@@ -40,8 +41,10 @@ def kali_tool(tool_name: str, argument_string: str, timeout: int | None = None) 
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
     try:
-        execution = subprocess.run(ALLOWED_TOOLS[tool_name] + safe_args, capture_output=True, text=True, timeout=timeout)
-        return json.dumps({"status": "completed" if execution.returncode == 0 else "warning", "exit_code": execution.returncode, "stdout": execution.stdout.strip(), "stderr": execution.stderr.strip()}, indent=2)
+        if execution.observed():
+            return execution.run_command(ALLOWED_TOOLS[tool_name] + safe_args, timeout=timeout)
+        result = subprocess.run(ALLOWED_TOOLS[tool_name] + safe_args, capture_output=True, text=True, timeout=timeout)
+        return json.dumps({"status": "completed" if result.returncode == 0 else "warning", "exit_code": result.returncode, "stdout": result.stdout.strip(), "stderr": result.stderr.strip()}, indent=2)
     except Exception as e:
         return json.dumps({"status": "exception", "message": str(e)}, indent=2)
 
@@ -62,6 +65,8 @@ def run_terminal(command: str, background: bool = False, timeout: int | None = N
     if background:
         process = subprocess.Popen(command, shell=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return f"Started background process {process.pid}; output is discarded."
+    if execution.observed():
+        return execution.run_command(command, shell=True, timeout=timeout)
     res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
     return json.dumps({"exit_code": res.returncode, "stdout": res.stdout[-12000:], "stderr": res.stderr[-12000:]})
 
