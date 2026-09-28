@@ -39,12 +39,13 @@ def ensure_server():
     if _health():
         return
     _process = subprocess.Popen([sys.executable, str(Path(__file__).with_name('render_server.py'))], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    for _ in range(50):
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
         if _process.poll() is not None:
             raise RuntimeError('Viewer failed to start. Port 8000 may be occupied; run python render_server.py to see the error.')
         if _health():
             return
-        time.sleep(0.1)
+        time.sleep(0.2)
     _stop_owned_server()
     raise RuntimeError('Viewer did not become ready on port 8000.')
 

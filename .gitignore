@@ -25,3 +25,8 @@ dist/
 work/
 outputs/
 .DS_Store
+
+# Personal conversation memory (normally stored outside this checkout)
+memory/
+*.sqlite3
+*.sqlite3-*

@@ -11,6 +11,8 @@ import brain
 import config
 import terminal_ui as ui
 from privacy import redact
+from session import Session
+from memory import MemoryStore
 
 
 def choose_brain() -> str:
@@ -32,8 +34,20 @@ def choose_mode() -> str:
     print("\nSelect mode:")
     print("  1) Text")
     print("  2) Voice")
+    print("  3) Web chat")
+    print("  4) Approval settings")
+    print("  5) Memory")
     choice = input("> ").strip()
-    return {"1": "text", "2": "voice"}.get(choice, "text")
+    return {"1": "text", "2": "voice", "3": "web", "4": "approval", "5": "memory"}.get(choice, "text")
+
+
+def choose_approval(session):
+    print("\nApproval settings (reset to ask when JARVIS closes):")
+    print("  1) Approve all commands in this session")
+    print("  2) Seek my approval for all commands")
+    choice = input("> ").strip()
+    session.set_approval("auto" if choice == "1" else "ask")
+    print("Automatic approval enabled for this session." if session.approval == "auto" else "JARVIS will ask before every tool action.")
 
 
 def confirm(action_desc: str) -> bool:
@@ -41,7 +55,7 @@ def confirm(action_desc: str) -> bool:
     return reply == "yes"
 
 
-def dispatch_action(tool: str, args: dict) -> str:
+def dispatch_action(tool: str, args: dict, *, confirmer=None, session=None) -> str:
     """Route a parsed action to the right function in actions.py."""
     if not isinstance(tool, str) or tool not in config.AVAILABLE_TOOLS:
         return "Unknown or invalid tool."
@@ -50,9 +64,10 @@ def dispatch_action(tool: str, args: dict) -> str:
     if tool == "none":
         return ""
 
-    if tool in config.CONFIRM_REQUIRED_TOOLS:
+    needs_approval = session.approval == "ask" if session is not None else tool in config.CONFIRM_REQUIRED_TOOLS
+    if needs_approval:
         description = f"{tool}({args})"
-        if not confirm(description):
+        if not (confirmer or confirm)(description):
             return "Cancelled — not confirmed."
 
     try:
@@ -90,8 +105,10 @@ def dispatch_action(tool: str, args: dict) -> str:
         return f"Action failed: {exc}"
 
 
-def run_text_mode(provider: str) -> None:
+def run_text_mode(provider: str, owner: bool = False, session=None) -> None:
     print("\nText mode. Type 'exit' to quit, 'menu' to change brain/mode.\n")
+    session = session or Session(MemoryStore())
+    session.start_chat()
     conversation = []
     while True:
         user_input = ui.read_message()
@@ -102,9 +119,18 @@ def run_text_mode(provider: str) -> None:
         if user_input.lower() == "menu":
             return
 
+        if user_input.lower() in {"/settings", "settings"}:
+            choose_approval(session)
+            continue
+        local = session.local_command(user_input)
+        if local is not None:
+            if user_input.lower() == "/forget all":
+                conversation.clear()
+            ui.show_reply(local)
+            continue
         conversation.append({"role": "user", "content": user_input})
         try:
-            result = brain.get_response(conversation, provider)
+            result = brain.get_response(conversation, provider, owner=owner, memory_context=session.memory_context)
         except brain.BrainError as exc:
             ui.show_error(str(exc))
             conversation.pop()
@@ -116,11 +142,14 @@ def run_text_mode(provider: str) -> None:
 
         output = ""
         if action.get("tool", "none") != "none":
-            output = redact(dispatch_action(action["tool"], action.get("args", {})))
+            output = redact(dispatch_action(action["tool"], action.get("args", {}), session=session))
             if output:
                 ui.show_output(action['tool'], output)
 
         record_result(conversation, result, output)
+        warning = session.save_turn(user_input, speak_text)
+        if warning:
+            ui.show_error(warning)
 
 
 def record_result(conversation: list, result: dict, output: str) -> None:
@@ -132,14 +161,16 @@ def record_result(conversation: list, result: dict, output: str) -> None:
     del conversation[:-40]
 
 
-def run_voice_mode(provider: str) -> None:
+def run_voice_mode(provider: str, owner: bool = False, session=None) -> None:
     try:
         import voice
         voice._get_microphone()
-    except (ImportError, OSError, AttributeError) as exc:
+    except (ImportError, OSError, AttributeError, ValueError) as exc:
         print(f"[voice] Voice input unavailable: {exc}. Use text mode or install requirements-voice.txt and check your microphone.")
         return
     print("\nVoice mode. Say 'jarvis' to wake me. Ctrl+C to quit or change mode.\n")
+    session = session or Session(MemoryStore())
+    session.start_chat()
     conversation = []
     try:
         while True:
@@ -153,9 +184,11 @@ def run_voice_mode(provider: str) -> None:
                 voice.speak("Goodbye.")
                 sys.exit(0)
 
+            if command_text.strip().lower() == "menu":
+                return
             conversation.append({"role": "user", "content": command_text})
             try:
-                result = brain.get_response(conversation, provider)
+                result = brain.get_response(conversation, provider, owner=owner, memory_context=session.memory_context)
             except brain.BrainError as exc:
                 voice.speak("I ran into an error talking to my brain.")
                 print(f"[error] {exc}")
@@ -169,40 +202,77 @@ def run_voice_mode(provider: str) -> None:
 
             output = ""
             if action.get("tool", "none") != "none":
-                output = redact(dispatch_action(action["tool"], action.get("args", {})))
+                output = redact(dispatch_action(action["tool"], action.get("args", {}), session=session))
                 if output:
                     ui.show_output(action['tool'], output)
 
             record_result(conversation, result, output)
+            warning = session.save_turn(command_text, speak_text)
+            if warning:
+                ui.show_error(warning)
     except KeyboardInterrupt:
         return
+    except (OSError, AttributeError) as exc:
+        ui.show_error(f"Microphone disconnected or unavailable: {exc}. Check the input device and try voice mode again.")
+    finally:
+        voice.close_microphone()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="JARVIS personal AI assistant")
     parser.add_argument("--provider", choices=["gemini", "ollama", "openai", "anthropic"])
-    parser.add_argument("--mode", choices=["text", "voice"])
+    parser.add_argument("--mode", choices=["auto", "text", "voice", "web"])
     parser.add_argument("--menu", action="store_true", help="Show provider and mode menus")
     parser.add_argument("--doctor", action="store_true", help="Report installed skills and missing dependencies")
     parser.add_argument("--test-voice", action="store_true", help="Speak a short sample using the configured voice")
+    parser.add_argument("--nxnx", action="store_true", help="Use the Nxnx owner profile (keeps action confirmations)")
+    parser.add_argument("--list-microphones", action="store_true", help="List input devices for JARVIS_MIC_INDEX")
     options = parser.parse_args()
+    if options.list_microphones:
+        import voice
+        for index, name in voice.list_microphones():
+            print(f"{index}: {name}")
+        return
     if options.doctor:
-        print(actions.list_skills())
+        ui.show_output("Skills", actions.list_skills())
         return
     if options.test_voice:
         import voice
         voice.speak("Hello. I am Jarvis, your personal assistant. All systems are ready.")
         return
     print("=== JARVIS ===")
-    provider = None if options.menu else options.provider
-    mode = None if options.menu else options.mode
+    session = Session(MemoryStore())
+    provider = None if options.menu else (options.provider or "ollama")
+    mode = None if options.menu else (options.mode or "auto")
     while True:
         provider = provider or choose_brain()
         mode = mode or choose_mode()
-        if mode == "text":
-            run_text_mode(provider)
+        if mode == "approval":
+            choose_approval(session)
+            mode = None
+            continue
+        if mode == "memory":
+            ui.show_reply(session.local_command('/memory'))
+            print("In chat: /remember <information> saves a note; /forget all clears this profile's memory.")
+            mode = None
+            continue
+        if mode == "auto":
+            from web_chat import internet_available
+            mode = "web" if internet_available() else "text"
+            if mode == "text":
+                print("Internet check failed; opening terminal chat. Type menu to choose another interface.")
+        if mode == "web":
+            from web_chat import run_web_mode
+            next_mode = run_web_mode(provider, owner=options.nxnx, session=session)
+            if next_mode == "exit":
+                return
+            if next_mode == "text":
+                mode = "text"
+                continue
+        elif mode == "text":
+            run_text_mode(provider, owner=options.nxnx, session=session)
         else:
-            run_voice_mode(provider)
+            run_voice_mode(provider, owner=options.nxnx, session=session)
         provider = mode = None
 
 

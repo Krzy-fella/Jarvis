@@ -4,6 +4,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.text import Text
+from presentation import readable_output
 
 console = Console()
 
@@ -20,7 +21,7 @@ def show_reply(message: str) -> None:
 
 def show_output(tool: str, output: str) -> None:
     console.print(Panel(
-        Text(output), title=Text(f"Result · {tool}"), title_align="left",
+        Text(readable_output(output)), title=Text(f"Result · {tool}"), title_align="left",
         border_style="dim", padding=(1, 2), width=min(console.width, 100),
     ))
     console.print()

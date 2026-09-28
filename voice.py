@@ -12,6 +12,7 @@ import tempfile
 import shutil
 import subprocess
 import re
+from contextlib import contextmanager
 
 import speech_recognition as sr
 
@@ -23,16 +24,80 @@ _RATE = os.environ.get("JARVIS_VOICE_RATE", "-5%")
 _PITCH = os.environ.get("JARVIS_VOICE_PITCH", "-8Hz")
 
 _recognizer = sr.Recognizer()
+_recognizer.operation_timeout = 15
 _microphone = None
+
+
+@contextmanager
+def _quiet_device_probe():
+    """Silence native ALSA/JACK probing only; Python exceptions still propagate.
+
+    This changes process stderr briefly and is used only by terminal voice mode.
+    Set JARVIS_AUDIO_DEBUG=1 to see the underlying driver diagnostics.
+    """
+    if os.name != 'posix' or os.environ.get('JARVIS_AUDIO_DEBUG') == '1':
+        yield
+        return
+    saved = os.dup(2)
+    try:
+        with open(os.devnull, 'w') as sink:
+            os.dup2(sink.fileno(), 2)
+            yield
+    finally:
+        os.dup2(saved, 2)
+        os.close(saved)
 
 
 def _get_microphone():
     global _microphone
     if _microphone is None:
-        _microphone = sr.Microphone()
-        with _microphone as source:
-            _recognizer.adjust_for_ambient_noise(source, duration=1)
+        index = os.environ.get('JARVIS_MIC_INDEX', '').strip()
+        with _quiet_device_probe():
+            try:
+                mic = sr.Microphone(device_index=int(index) if index else None)
+            except AssertionError as exc:
+                raise OSError('Invalid microphone selection. Run jarvis --list-microphones and check JARVIS_MIC_INDEX.') from exc
+            mic.__enter__()
+        if mic.stream is None:
+            raise OSError('Could not open the microphone. Check your system input device or set JARVIS_MIC_INDEX.')
+        try:
+            _recognizer.adjust_for_ambient_noise(mic, duration=1)
+        except BaseException:
+            mic.__exit__(None, None, None)
+            raise
+        _microphone = mic
     return _microphone
+
+
+def close_microphone():
+    global _microphone
+    if _microphone is not None:
+        try:
+            _microphone.__exit__(None, None, None)
+        finally:
+            _microphone = None
+
+
+def list_microphones():
+    with _quiet_device_probe():
+        import pyaudio
+        audio = pyaudio.PyAudio()
+        try:
+            return [(i, audio.get_device_info_by_index(i)['name'])
+                    for i in range(audio.get_device_count())
+                    if audio.get_device_info_by_index(i)['maxInputChannels'] > 0]
+        finally:
+            audio.terminate()
+
+
+def _listen(timeout, phrase_time_limit):
+    mic = _get_microphone()
+    # Drop audio accumulated while JARVIS was speaking or calling the model.
+    stream = mic.stream.pyaudio_stream
+    available = stream.get_read_available()
+    if available:
+        stream.read(available, exception_on_overflow=False)
+    return _recognizer.listen(mic, timeout=timeout, phrase_time_limit=phrase_time_limit)
 
 
 def speak(text: str) -> None:
@@ -103,11 +168,9 @@ def listen_for_wake_word(timeout: int = None) -> bool:
     Block until the wake word is heard (or `timeout` seconds elapse).
     Returns True if the wake word was detected, False on timeout.
     """
-    mic = _get_microphone()
     print(f"[voice] Listening for wake word '{config.WAKE_WORD}'...")
     try:
-        with mic as source:
-            audio = _recognizer.listen(source, timeout=timeout, phrase_time_limit=4)
+        audio = _listen(timeout=timeout, phrase_time_limit=4)
         heard = _recognizer.recognize_google(audio).lower()
         return bool(re.search(r"\b" + re.escape(config.WAKE_WORD) + r"\b", heard))
     except sr.WaitTimeoutError:
@@ -121,11 +184,9 @@ def listen_for_wake_word(timeout: int = None) -> bool:
 
 def listen_command(timeout: int = 6) -> str:
     """Capture one spoken command and return it as text (empty string on failure)."""
-    mic = _get_microphone()
     print("[voice] Listening for command...")
     try:
-        with mic as source:
-            audio = _recognizer.listen(source, timeout=timeout, phrase_time_limit=10)
+        audio = _listen(timeout=timeout, phrase_time_limit=10)
         return _recognizer.recognize_google(audio)
     except sr.WaitTimeoutError:
         print("[voice] Timed out waiting for a command.")
