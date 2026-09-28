@@ -20,3 +20,20 @@ Hardware acceptance requires a USB-authorized phone and an active Bluetooth
 service/adapter. Tests using mocks verify command construction, not real hardware.
 Optional iOS functionality requires a trusted USB connection and libimobiledevice;
 Android-style app/call/SMS control is outside that limited implementation.
+
+## Web and voice follow-up
+
+- Implemented: default online web launch, terminal/web menu, glass-style local UI.
+- Implemented: readable response envelope handling and tool output.
+- Implemented: per-launch API token, origin/host checks, single-use tool approvals, background execution.
+- Implemented: Nxnx owner preference profile without removing confirmations.
+- Implemented: persistent microphone session, scoped driver log suppression, microphone selection.
+- Figma draft exists; canvas design is blocked by the Starter-plan MCP tool limit.
+- Spoken wake-word accuracy, Bluetooth pairing, and authorized Android hardware actions still need user participation.
+
+## Session approvals and persistent memory
+
+- Implemented both requested approval choices in terminal/web menus. Ask is the default; auto approval is process-local and never persisted.
+- Implemented owner-only SQLite memory outside the checkout, recent-turn retention, pinned notes, and view/forget controls.
+- Memory is shared across terminal, web, voice, and the Nxnx preference. Known credentials are redacted and memory databases are ignored/rejected by publication checks.
+- Tests cover persistence after reopening, retention, forgetting, credential redaction, provider context, automatic action execution, and approval reset.
