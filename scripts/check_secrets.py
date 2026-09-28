@@ -38,9 +38,9 @@ def main():
     count = 0
     for name in filter(None, paths):
         path = Path(name)
-        if path.name != '.env.example' and (path.name.startswith('.env') or path.suffix in {'.pem', '.key', '.p12', '.pfx'}):
+        if path.name != '.env.example' and (path.name.startswith('.env') or path.suffix in {'.pem', '.key', '.p12', '.pfx', '.sqlite3'} or '.sqlite3-' in path.name):
             findings.append((name, 'credential filename'))
-        if any(part in {'.venv', 'venv', '.ssh', '.ollama'} for part in path.parts):
+        if any(part in {'.venv', 'venv', '.ssh', '.ollama', 'memory'} for part in path.parts):
             findings.append((name, 'private/generated directory'))
         data = subprocess.check_output(['git', 'show', ':' + name], cwd=ROOT) if args.staged else (ROOT / name).read_bytes()
         count += 1

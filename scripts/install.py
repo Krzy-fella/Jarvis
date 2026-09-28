@@ -27,11 +27,11 @@ def main():
         shutil.copyfile(root / '.env.example', env_file)
         env_file.chmod(0o600)
     if os.name == 'nt':
-        print('Setup complete. Run .venv\\Scripts\\python.exe main.py --provider ollama --mode text')
+        print('Setup complete. Run .venv\\Scripts\\python.exe main.py --provider ollama --mode auto')
         return
     launcher = Path.home() / '.local/bin/jarvis'
     launcher.parent.mkdir(parents=True, exist_ok=True)
-    body = '#!/bin/sh\nexec ' + shlex.quote(str(python)) + ' ' + shlex.quote(str(root / 'main.py')) + ' --provider ollama --mode text "$@"\n'
+    body = '#!/bin/sh\nexec ' + shlex.quote(str(python)) + ' ' + shlex.quote(str(root / 'main.py')) + ' --provider ollama --mode auto "$@"\n'
     if launcher.exists() and launcher.read_text() != body:
         backup = launcher.with_name('jarvis.previous')
         if backup.exists():
