@@ -15,9 +15,9 @@ class Session:
     def start_chat(self):
         self.memory_context = self.memory.context()
 
-    def save_turn(self, user, assistant):
+    def save_turn(self, user, assistant, chat_id=None):
         try:
-            self.memory.save_turn(user, assistant)
+            self.memory.save_turn(user, assistant, chat_id=chat_id)
             return ''
         except (OSError, sqlite3.Error) as exc:
             return f'Local memory could not be saved ({type(exc).__name__}). This reply was not saved.'

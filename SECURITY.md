@@ -34,3 +34,9 @@ through a tunnel, reverse proxy, or LAN bind. `--nxnx` is a preference, not an
 authentication mechanism. Recent chat memory is stored locally in an owner-only SQLite database outside the
 checkout; it is not encrypted. Known secrets are redacted. Memory excerpts go to
 the selected provider with chat requests. Tab token storage is local.
+
+Saved web chats use the same private database and retain their transcripts,
+including tool results, until deleted. Known credentials are redacted before
+storage. Deleting a chat also removes its linked recent-memory turns, but not
+explicit saved notes. The general-memory forget command does not remove saved
+sidebar chats. Restoring a chat never replays interrupted tool actions.

@@ -22,6 +22,8 @@ class MemoryStore:
         with self._connection() as db:
             db.execute('CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY, profile TEXT, user TEXT, assistant TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY, profile TEXT, text TEXT)')
+            if 'chat_id' not in {row[1] for row in db.execute('PRAGMA table_info(turns)')}:
+                db.execute('ALTER TABLE turns ADD COLUMN chat_id TEXT')
 
     @contextmanager
     def _connection(self):
@@ -32,9 +34,9 @@ class MemoryStore:
         finally:
             db.close()
 
-    def save_turn(self, user, assistant):
+    def save_turn(self, user, assistant, chat_id=None):
         with self._lock, self._connection() as db:
-            db.execute('INSERT INTO turns(profile,user,assistant) VALUES(?,?,?)', (self.profile, redact(user)[:8000], redact(assistant)[:8000]))
+            db.execute('INSERT INTO turns(profile,user,assistant,chat_id) VALUES(?,?,?,?)', (self.profile, redact(user)[:8000], redact(assistant)[:8000], chat_id))
             db.execute('DELETE FROM turns WHERE profile=? AND id NOT IN (SELECT id FROM turns WHERE profile=? ORDER BY id DESC LIMIT 100)', (self.profile, self.profile))
 
     def remember(self, text):

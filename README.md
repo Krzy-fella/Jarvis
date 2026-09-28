@@ -59,7 +59,8 @@ Cloud AI still needs internet regardless of interface.
 
 The local web app has translucent dark panels, a spacious conversation view,
 readable tool results, a new-conversation button, and an interface menu. Use that
-menu to return to terminal chat or choose a provider/voice mode. Each interface starts a fresh conversation view while loading saved local memory.
+menu to return to terminal chat or choose a provider/voice mode. The web interface
+reopens your last active saved conversation; terminal and voice load general memory.
 Browser “Read replies aloud” uses your browser's available voices; the customized
 Ryan preset is used by terminal voice mode.
 
@@ -81,6 +82,30 @@ Its source is in `web/`, and its server is `web_chat.py`. The Figma draft was
 created, but Figma's Starter-plan tool limit prevented canvas design; the implemented
 interface is currently maintained in code.
 
+## Saved conversations
+
+Web conversations save automatically on this computer. Click a title under
+**Recents** or **Pinned** to restore its messages and continue where you left off,
+including after restarting JARVIS. **New conversation** keeps the previous chat.
+Titles come from the first message; empty conversations do not clutter the sidebar.
+
+- Right-click a chat or the chat panel and choose **Select chats** or **Select all chats**.
+- Check the conversations you want, then **Pin**, **Unpin**, or **Delete**.
+- Use a chat's **×** button to delete it individually, or **⋯** for its action menu.
+- Deletion asks for confirmation and removes the selected transcripts and their
+  linked recent memory. Explicitly saved notes remain.
+- On narrow screens, use the header's saved-chats button to open the sidebar.
+
+The full visible transcript, including tool results, remains until deleted. The
+latest 40 conversation messages are restored as model context, alongside general
+memory; the model does not receive an unlimited transcript. Interrupted requests
+are marked and never automatically replayed. Finish or cancel pending actions
+before switching or managing chats.
+
+Previously retained memory turns are imported once into **Earlier conversations**;
+the old version did not record chat boundaries. Older unsaved messages cannot be
+recovered. This sidebar stores web conversations locally, without cloud sync.
+
 ## Approval settings and memory
 
 In the web menu, **Approval settings** offers:
@@ -96,10 +121,10 @@ settings. Automatic approval gives the model the ability to run commands and edi
 files with your OS account's permissions. Existing command/path checks remain;
 these checks are not a sandbox.
 
-JARVIS now saves successful chat turns locally for later sessions, including voice
-chats. Memory starts with conversations after this update; old unsaved chats cannot
-be recovered. It retains the latest **100 turns** and supplies the latest **8** plus
-up to **30 saved notes** as bounded background context. Tool output is not stored.
+JARVIS saves successful chat turns as general memory for later sessions, including
+voice chats. It retains the latest **100 turns** and supplies the latest **8** plus
+up to **30 saved notes** as bounded background context. Tool output is excluded
+from this general memory, but is retained in saved web conversation transcripts.
 For facts you want to keep beyond recent history, use:
 
 ```text
@@ -111,7 +136,9 @@ For facts you want to keep beyond recent history, use:
 The web menu also has **View saved memory** and **Forget saved memory**. Starting a
 new conversation clears the visible chat, not saved memory. `/forget all` clears
 saved notes, saved turns, and the model's current chat context; future messages
-start accumulating new memory. The forget menu asks you to confirm deletion.
+start accumulating new memory. Saved sidebar conversations remain and can restore
+their own context when reopened; delete those separately. The forget menu asks
+you to confirm deletion.
 
 Memory is shared across interfaces and the `--nxnx` preference for your OS user.
 It lives in `~/.local/share/jarvis/memory/memory.sqlite3` with owner-only file
