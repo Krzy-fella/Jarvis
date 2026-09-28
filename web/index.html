@@ -26,7 +26,21 @@
 <div id="approval" class="approval" hidden><span class="eyebrow">YOUR APPROVAL NEEDED</span><h3 id="approval-title"></h3><pre id="approval-details"></pre><p>Review the exact action before it runs on your computer.</p><div><button id="approve" class="primary">Approve & run</button><button id="cancel">Cancel action</button></div></div>
 </section>
 <footer><div id="status" role="status">Connecting to your assistant…</div><form id="composer" class="composer"><label class="sr-only" for="message">Message JARVIS</label><textarea id="message" rows="1" maxlength="16000" placeholder="Ask anything. Let’s work it out." required></textarea><button type="submit" id="send" class="send" aria-label="Send message">↑</button></form><div class="footer-note"><span>JARVIS <span class="separator">/</span> <span id="provider">Ollama cloud</span></span><span>Enter to send <span class="separator">·</span> Shift + Enter for a new line</span></div></footer>
-</main></div>
+</main>
+<aside id="execution-panel" class="execution-panel glass" aria-labelledby="execution-heading" hidden>
+  <div class="execution-heading"><div><span class="eyebrow">LIVE ACTIVITY</span><h2 id="execution-heading">Execution process</h2></div><button id="close-execution" class="icon-button" aria-label="Close execution process">×</button></div>
+  <div class="execution-body">
+    <div class="execution-status"><span id="execution-stage"></span><span id="execution-elapsed"></span></div>
+    <progress id="execution-progress" max="100" aria-label="Execution progress"></progress>
+    <p id="execution-progress-label" class="execution-caption"></p>
+    <ol id="execution-steps" aria-label="Execution stages"></ol>
+    <div class="eyebrow">CURRENT COMMAND OR ACTION</div><pre id="execution-command"></pre>
+    <p id="execution-info" class="execution-caption"></p>
+    <div class="execution-log-heading"><span class="eyebrow">LIVE OUTPUT</span><label><input id="execution-follow" type="checkbox" checked> Follow</label></div>
+    <pre id="execution-log" tabindex="0" aria-label="Live execution output"></pre>
+    <p id="execution-result" class="execution-caption"></p>
+  </div>
+</aside></div>
 <div id="chat-context" class="chat-context glass" role="menu" aria-label="Chat actions" hidden>
   <button role="menuitem" id="context-select">Select chats</button>
   <button role="menuitem" id="context-all">Select all chats</button>

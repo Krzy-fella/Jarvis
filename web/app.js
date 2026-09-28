@@ -6,6 +6,7 @@ const token = sessionStorage.getItem('jarvis-token') || '';
 let revision = -1, current = null, stopped = false, reading = false, renderedCount = 0;
 let selecting = false, selectedChats = new Set(), deleteIds = [], sidebarSignature = '';
 const drafts = new Map();
+let selectedExecution = null, executionReturnFocus = null;
 async function api(path, body) {
   const response = await fetch('/api/' + path, {method: body === undefined ? 'GET' : 'POST', headers: {'X-Jarvis-Token': token, 'Content-Type': 'application/json'}, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
   const data = await response.json();
@@ -31,6 +32,7 @@ function render(state) {
   const previousPending = current?.pending?.id;
   const changedChat = current?.chat_id !== state.chat_id;
   if (changedChat) {
+    closeExecution();
     if (current) drafts.set(current.chat_id, $('message').value);
     $('message').value = drafts.get(state.chat_id) || '';
     $('message').style.height = '';
@@ -58,7 +60,15 @@ function render(state) {
       const item = document.createElement('article'); item.className = 'message ' + message.role;
       const label = document.createElement('div'); label.className = 'message-label';
       label.textContent = message.label || ({assistant:'JARVIS', user:'YOU', error:'SOMETHING WENT WRONG', tool:'RESULT'}[message.role]);
-      item.append(label, contentNode(message.content)); $('messages').append(item);
+      item.append(label, contentNode(message.content));
+      if (message.execution) {
+        const button = document.createElement('button'); button.className = 'execution-button';
+        button.textContent = 'See execution process'; button.setAttribute('aria-label', 'See execution process'); button.dataset.executionId = message.execution.id;
+        button.setAttribute('aria-controls', 'execution-panel');
+        button.setAttribute('aria-expanded', String(selectedExecution === message.execution.id));
+        button.addEventListener('click', () => openExecution(message.execution.id, button)); item.append(button);
+      }
+      $('messages').append(item);
       if (reading && index >= renderedCount && message.role === 'assistant' && 'speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(message.content);
         utterance.lang = 'en-GB'; utterance.rate = .95;
@@ -72,6 +82,7 @@ function render(state) {
     if (!state.messages.length) scroll.scrollTop = 0;
     else if (changedChat || nearBottom || state.messages.at(-1)?.role === 'user') scroll.scrollTop = scroll.scrollHeight;
   }
+  renderExecution();
   $('approval').hidden = !state.pending;
   if (state.pending) {
     $('approval-title').textContent = state.pending.tool.replaceAll('_', ' ');
@@ -246,3 +257,57 @@ function closeChatDrawer() {
 document.addEventListener('click', event => {
   if (document.body.classList.contains('chats-open') && !event.target.closest('.sidebar, #toggle-chats, #chat-context, #delete-dialog')) closeChatDrawer();
 });
+
+const executionStages = {preparing:'Preparing response', approval:'Waiting for approval', running:'Running task', completed:'Completed', failed:'Failed', cancelled:'Cancelled', timed_out:'Timed out', detached:'Launched in background', interrupted:'Interrupted'};
+function closeExecution() {
+  selectedExecution = null; $('execution-panel').hidden = true;
+  document.querySelector('.shell').classList.remove('execution-open');
+  document.querySelectorAll('.execution-button').forEach(button => button.setAttribute('aria-expanded', 'false'));
+}
+function openExecution(id, button) {
+  selectedExecution = id; executionReturnFocus = button;
+  $('execution-panel').hidden = false; document.querySelector('.shell').classList.add('execution-open');
+  document.querySelectorAll('.execution-button').forEach(item => item.setAttribute('aria-expanded', String(item.dataset.executionId === id)));
+  renderExecution(); $('close-execution').focus();
+}
+function duration(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+  return seconds >= 3600 ? Math.floor(seconds / 3600) + 'h ' + Math.floor(seconds % 3600 / 60) + 'm ' + seconds % 60 + 's' : seconds >= 60 ? Math.floor(seconds / 60) + 'm ' + seconds % 60 + 's' : seconds + 's';
+}
+function renderExecution() {
+  if (!selectedExecution || !current) return;
+  const task = current.messages.find(message => message.execution?.id === selectedExecution)?.execution;
+  if (!task) { closeExecution(); return; }
+  $('execution-stage').textContent = executionStages[task.stage] || task.stage;
+  $('execution-elapsed').textContent = duration((task.ended_at || Date.now() / 1000) - (task.run_started_at || task.started_at)) + (task.run_started_at ? (task.ended_at ? ' runtime' : ' running') : ' elapsed');
+  const progress = $('execution-progress');
+  if (task.stage === 'completed') { progress.value = 100; $('execution-progress-label').textContent = 'Task finished · 100%'; }
+  else if (task.percent !== null && task.percent !== undefined) {
+    progress.value = task.percent;
+    $('execution-progress-label').textContent = task.phase + ' · ' + task.percent.toFixed(1) + '% (tool-reported phase progress)';
+  } else {
+    progress.removeAttribute('value');
+    $('execution-progress-label').textContent = task.stage === 'running' ? 'Running · this tool has not reported a percentage.' : task.stage === 'preparing' ? 'Waiting for the AI provider…' : executionStages[task.stage];
+  }
+  progress.classList.toggle('inactive', Boolean(task.ended_at));
+  const steps = $('execution-steps');
+  const signature = JSON.stringify(task.steps);
+  if (steps.dataset.signature !== signature) {
+    steps.replaceChildren(); steps.dataset.signature = signature;
+    task.steps.forEach(step => { const item = document.createElement('li'); item.textContent = (executionStages[step.stage] || step.stage) + ' · ' + duration(step.at - task.started_at); steps.append(item); });
+  }
+  $('execution-command').textContent = task.command || 'No command requested.';
+  $('execution-info').textContent = task.pid ? 'Process ' + task.pid + (task.exit_code !== undefined ? ' · Exit code ' + task.exit_code : '') : task.tool && task.tool !== 'none' ? 'Task: ' + task.tool.replaceAll('_', ' ') : 'No external process requested.';
+  const log = $('execution-log');
+  const text = task.log || (task.stage === 'running' ? 'Waiting for output… Some tools buffer output until later.' : 'No command output.');
+  if (log.textContent !== text) { log.textContent = text; if ($('execution-follow').checked) log.scrollTop = log.scrollHeight; }
+  $('execution-result').textContent = task.stage === 'detached' ? 'The process was launched separately. Its later progress and completion are not monitored.' : task.result_note || 'Output updates as the tool emits it. The most recent 16,000 characters are retained.';
+}
+function dismissExecution() {
+  const id = selectedExecution;
+  closeExecution();
+  const button = [...document.querySelectorAll('.execution-button')].find(item => item.dataset.executionId === id);
+  (button || executionReturnFocus)?.focus();
+}
+$('close-execution').addEventListener('click', dismissExecution);
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && selectedExecution) dismissExecution(); });
