@@ -136,6 +136,10 @@ def create_app(provider='ollama', owner=False, token=None, host='127.0.0.1:8765'
     def javascript():
         return FileResponse(WEB_ROOT / 'app.js', media_type='text/javascript')
 
+    @app.get('/input-history.js')
+    def input_history():
+        return FileResponse(WEB_ROOT / 'input-history.js', media_type='text/javascript')
+
     @app.get('/style.css')
     def stylesheet():
         return FileResponse(WEB_ROOT / 'style.css', media_type='text/css')

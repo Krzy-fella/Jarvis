@@ -221,13 +221,28 @@ def run_voice_mode(provider: str, owner: bool = False, session=None) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="JARVIS personal AI assistant")
     parser.add_argument("--provider", choices=["gemini", "ollama", "openai", "anthropic"])
-    parser.add_argument("--mode", choices=["auto", "text", "voice", "web"])
+    parser.add_argument("--mode", choices=["auto", "text", "voice", "web", "satellite"])
     parser.add_argument("--menu", action="store_true", help="Show provider and mode menus")
     parser.add_argument("--doctor", action="store_true", help="Report installed skills and missing dependencies")
     parser.add_argument("--test-voice", action="store_true", help="Speak a short sample using the configured voice")
     parser.add_argument("--nxnx", action="store_true", help="Use the Nxnx owner profile (keeps action confirmations)")
     parser.add_argument("--list-microphones", action="store_true", help="List input devices for JARVIS_MIC_INDEX")
+    parser.add_argument("--satellite-host", help="Explicit private LAN IP for Satellite Beta (default: loopback)")
+    parser.add_argument("--satellite-port", type=int, help="Satellite Beta port (default: 8766)")
+    parser.add_argument("--satellite-cert", help="Trusted HTTPS certificate file for Satellite Beta")
+    parser.add_argument("--satellite-key", help="HTTPS private key file; never shared with clients")
+    parser.add_argument("--satellite-insecure-http", action="store_true", help="Allow unencrypted Satellite traffic on a trusted LAN for testing")
+    satellite_admin = parser.add_mutually_exclusive_group()
+    satellite_admin.add_argument("--satellite-devices", action="store_true", help="List paired Satellite devices on this PC")
+    satellite_admin.add_argument("--satellite-revoke", metavar="DEVICE_ID", help="Revoke a Satellite device credential on this PC")
     options = parser.parse_args()
+    if options.mode == "satellite" or options.satellite_devices or options.satellite_revoke:
+        try:
+            from satellite.cli import run_cli
+            return run_cli(options)
+        except (Exception, SystemExit):
+            print("[satellite beta] Satellite could not load. Normal JARVIS remains available through text, voice and web modes.")
+            return 1
     if options.list_microphones:
         import voice
         for index, name in voice.list_microphones():
@@ -278,6 +293,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     try:
-        main()
+        sys.exit(main())
     except (EOFError, KeyboardInterrupt):
         print("\nGoodbye.")

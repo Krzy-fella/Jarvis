@@ -50,6 +50,24 @@ Alternatively run `.venv/bin/python main.py --provider ollama --mode text`.
 On Windows use `.venv\Scripts\python.exe`. In VS Code choose the `.venv`
 interpreter and use the included **JARVIS** launch configuration.
 
+## Recall earlier messages with Up / Down
+
+In terminal chat, press **Up** for an older message and **Down** for a newer one.
+Moving past the newest restores your unfinished draft. Terminal recall keeps the
+latest 100 distinct consecutive inputs for this running process, redacts known
+secrets, and does not write a separate history file. Approval answers and menu
+choices are excluded. `/forget all` clears terminal input recall as well as memory.
+Python builds without `readline` retain plain input; the Linux installation supports it.
+
+Both normal web chat and Satellite support the same keys in the message box.
+Start recall with Up on the first line; Down moves forward. Once browsing, repeated
+arrows move through earlier messages until you edit. Your draft returns after the
+newest message. Outside history, arrows still move through multiline text normally;
+selection, Shift/Alt/Ctrl/Meta modifiers and input composition are left alone.
+Web recall uses the current chat's latest 100 user messages (Satellite retains 80
+visible messages total), including restored chats. It never includes assistant/tool
+output or another device's conversation. Recalling text does not send or execute it.
+
 ## Web chat and interface selection
 
 `jarvis` defaults to **auto**: at launch, a short internet check selects web chat
@@ -301,3 +319,62 @@ platforms start from `requirements.txt` and optionally `requirements-voice.txt`.
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [the implementation plan](docs/IMPLEMENTATION_PLAN.md).
 
 Dependencies are not relicensed by this repository; each retains its own license.
+
+## JARVIS Satellite Beta
+
+**Experimental, disabled by default, conversation only.** A TV or another browser
+on your private LAN can act as a lightweight JARVIS screen. Your PC runs the
+existing AI brain and keeps a separate conversation and memory for each device.
+Normal PC text, voice and web modes remain separate. The private PC web server is
+still loopback-only; Satellite uses its own restricted service on port 8766.
+
+No new Python dependencies or model downloads are needed beyond `requirements.txt`.
+For a first **local PC preview**:
+
+```bash
+JARVIS_SATELLITE_ENABLED=true jarvis --mode satellite --satellite-insecure-http
+```
+
+For a TV, replace the example IP with this PC's private LAN IP and provide a
+certificate/key trusted by that TV browser, with a certificate SAN for the IP:
+
+```bash
+JARVIS_SATELLITE_ENABLED=true jarvis --mode satellite \
+  --satellite-host 192.168.1.25 \
+  --satellite-cert /absolute/path/to/satellite.crt \
+  --satellite-key /absolute/path/to/satellite.key
+```
+
+Open the printed address on the TV, name the device, and enter the six-digit code
+shown in the PC terminal. The code expires in five minutes, allows ten guesses,
+and works once. Restart Satellite for another code; paired devices survive a
+restart. Keep the terminal open; **Ctrl+C stops only Satellite**. Use a second
+terminal for normal JARVIS.
+
+Text is the reliable starting point. Modern browsers supporting Fetch, Web Crypto
+and current JavaScript are expected to work; actual smart-TV browsers and remote
+microphones need testing. Voice input is optional browser speech recognition with
+trusted HTTPS and microphone permission; unsupported devices show a text fallback.
+Recognized text is reviewed before sending. **Read latest reply** uses the device's
+browser voice. No PC microphone, audio driver, wake word or TTS service is involved.
+
+Satellite can chat and use its own `/remember`, `/memory`, and `/forget all`.
+**Every PC action is blocked server-side**, including terminal commands, files,
+apps, research, Kali tools and device control. PC owner and auto-approval settings
+do not grant Satellite access. Up to eight devices can pair; only one Satellite
+message runs at a time. Chats reconnect automatically with bounded saved history.
+
+Use HTTPS on a private trusted LAN. An explicitly requested
+`--satellite-insecure-http` LAN trial exposes chats and credentials to network
+observers and normally disables browser microphone support. Never forward this
+port to the internet or expose the existing PC web server.
+
+```bash
+jarvis --satellite-devices
+jarvis --satellite-revoke DEVICE_ID
+```
+
+For setup, pairing, compatibility, port/certificate troubleshooting, privacy,
+limitations, file-by-file implementation details, and the future PC-control plan,
+read [the Satellite Beta guide](docs/SATELLITE_BETA.md). Satellite startup errors
+are identified as beta errors and leave normal JARVIS available.
