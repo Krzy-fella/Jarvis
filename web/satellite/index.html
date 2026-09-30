@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>JARVIS · Satellite Beta</title><link rel="stylesheet" href="/style.css"><script src="/voice.js" defer></script><script src="/input-history.js" defer></script><script src="/app.js" defer></script></head>
+<body><main>
+<header><div><span class="eyebrow">YOUR HOME, CONNECTED</span><h1>JARVIS <span>Satellite Beta</span></h1></div><button id="fullscreen" type="button">Full screen</button></header>
+<section class="presence" aria-label="Connection status"><div class="orb" aria-hidden="true"></div><div><h2 id="status" role="status">Disconnected</h2><p id="identity">Connect this screen to your JARVIS PC.</p></div><span class="capability">Conversation only · PC control disabled</span></section><p id="notice" role="status"></p>
+<section id="pair-panel" class="glass"><h2>A familiar voice. A new screen.</h2><p>Start Satellite Beta on your PC, then enter the one-time code shown in its terminal.</p><form id="pair-form">
+<label for="device-name">Device name</label><input id="device-name" maxlength="60" value="Living Room TV" required autocomplete="off">
+<label for="device-type">Device type</label><select id="device-type"><option value="tv">TV</option><option value="browser">Other browser</option></select>
+<label for="pair-code">Pairing code</label><input id="pair-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6 digits" required autocomplete="off">
+<label class="check"><input type="checkbox" id="remember-device"> Remember this device on this browser</label><p class="hint">Anyone using this browser profile can open this device's chat. Leave unchecked on a shared screen. Codes expire after five minutes; restart Satellite on the PC for a new one.</p><button class="primary" id="connect" type="submit">Connect to JARVIS</button></form></section>
+<section id="chat-panel" hidden><div class="toolbar"><span id="connection">Connected</span><button type="button" id="reconnect">Reconnect</button><button type="button" id="forget-device">Disconnect this browser</button></div>
+<div id="messages" class="glass messages" role="log" aria-label="Conversation" aria-live="polite" tabindex="0"><p class="empty">Your conversation begins here.</p></div>
+<form id="chat-form" class="glass composer"><label for="message">Message JARVIS</label><textarea id="message" rows="3" maxlength="4000" required placeholder="Ask a question, or use /remember to save a note for this device."></textarea><div class="composer-actions"><button type="button" id="microphone">Use microphone</button><button type="button" id="read-reply">Read latest reply</button><button class="primary" id="send" type="submit">Send message</button></div><p id="voice-help" class="hint"></p></form></section>
+<footer>Experimental · Your PC runs the assistant · Device memory stays separate from your PC chats</footer>
+</main></body></html>
