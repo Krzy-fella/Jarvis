@@ -6,6 +6,7 @@ const token = sessionStorage.getItem('jarvis-token') || '';
 let revision = -1, current = null, stopped = false, reading = false, renderedCount = 0;
 let selecting = false, selectedChats = new Set(), deleteIds = [], sidebarSignature = '';
 const drafts = new Map();
+const inputHistory = window.JarvisInputHistory($('message'), () => (current?.messages || []).filter(message => message.role === 'user').map(message => message.content));
 let selectedExecution = null, executionReturnFocus = null;
 async function api(path, body) {
   const response = await fetch('/api/' + path, {method: body === undefined ? 'GET' : 'POST', headers: {'X-Jarvis-Token': token, 'Content-Type': 'application/json'}, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
@@ -32,6 +33,7 @@ function render(state) {
   const previousPending = current?.pending?.id;
   const changedChat = current?.chat_id !== state.chat_id;
   if (changedChat) {
+    inputHistory.reset();
     closeExecution();
     if (current) drafts.set(current.chat_id, $('message').value);
     $('message').value = drafts.get(state.chat_id) || '';
@@ -100,7 +102,7 @@ async function poll() {
 async function send(text) {
   if (!text.trim() || current?.busy) return;
   $('send').disabled = true;
-  try { await api('message', {text: text.trim(), chat_id: current?.chat_id ?? null}); drafts.delete(current?.chat_id ?? null); $('message').value = ''; $('message').style.height = ''; render(await api('state')); }
+  try { await api('message', {text: text.trim(), chat_id: current?.chat_id ?? null}); drafts.delete(current?.chat_id ?? null); inputHistory.reset(); $('message').value = ''; $('message').style.height = ''; render(await api('state')); }
   catch (error) { showError(error); $('send').disabled = false; }
 }
 $('composer').addEventListener('submit', event => { event.preventDefault(); send($('message').value); });
