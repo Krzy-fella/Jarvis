@@ -52,7 +52,7 @@ interpreter and use the included **JARVIS** launch configuration.
 
 ## Recall earlier messages with Up / Down
 
-In terminal chat, press **Up** for an older message and **Down** for a newer one.
+In terminal chat, type `/tv` for TV setup and controls. Press **Up** for an older message and **Down** for a newer one.
 Moving past the newest restores your unfinished draft. Terminal recall keeps the
 latest 100 distinct consecutive inputs for this running process, redacts known
 secrets, and does not write a separate history file. Approval answers and menu
@@ -243,7 +243,7 @@ This does not install a JACK server or repair a missing/disconnected microphone.
 Terminal and Kali commands have a **3,830-second timeout (1 hour, 3 minutes, 50 seconds)**.
 Set `JARVIS_TOOL_TIMEOUT` in `.env` to change it. API/device calls keep shorter
 timeouts. Terminal-mode foreground output appears when the command finishes; the web monitor
-streams foreground command output while it runs. In terminal mode, Ctrl+C interrupts waiting; a command may leave its own child processes running.
+streams foreground command output while it runs. On POSIX, timeout or Ctrl+C stops the foreground command’s process group; deliberately detached jobs are separate.
 Background mode runs detached and has no automatic timeout.
 
 Read the file before editing it. A second edit requires you to remove or rename the
@@ -322,7 +322,12 @@ Dependencies are not relicensed by this repository; each retains its own license
 
 ## JARVIS Satellite Beta
 
-**Experimental, disabled by default, conversation only.** A TV or another browser
+**Experimental, disabled by default, conversation only.
+
+Use **TV mode · setup & controls** in the web menu, or **6) TV mode** in `jarvis --menu` (also `/tv` during text chat). Both explain setup before starting, offer a loopback PC preview or private-network HTTPS, show the address and short-lived pairing code, and let you stop the managed server. TV mode stays on while switching normal interfaces and stops when JARVIS exits normally. Menu setup is an explicit session opt-in; it does not change `.env`. The standalone CLI below still requires the enable flag.
+
+See the [October project review](docs/REVIEW_2026-10-01.md) for the verified scope and remaining limits.
+** A TV or another browser
 on your private LAN can act as a lightweight JARVIS screen. Your PC runs the
 existing AI brain and keeps a separate conversation and memory for each device.
 Normal PC text, voice and web modes remain separate. The private PC web server is

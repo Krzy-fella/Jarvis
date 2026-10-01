@@ -25,7 +25,9 @@ class Scene(BaseModel):
     color: str = Field(default="#00ff88", pattern=r"^#[0-9a-fA-F]{6}$")
     size: float = Field(default=1, gt=0, le=100, allow_inf_nan=False)
 
-app = FastAPI(title="JARVIS 3D Render Server")
+app = FastAPI(title="JARVIS 3D Render Server", docs_url=None, redoc_url=None, openapi_url=None)
+from local_security import LocalGuard
+app.add_middleware(LocalGuard, hosts={'127.0.0.1:8000', 'localhost:8000'})
 
 
 @app.get("/health")

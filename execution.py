@@ -183,7 +183,13 @@ def run_command(command, *, shell=False, timeout):
     finally:
         stop.set()
         if process.poll() is None:
-            process.kill()
+            if os.name == 'posix':
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            else:
+                process.kill()
             process.wait()
     for pending in partials.values():
         if pending:

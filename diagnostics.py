@@ -12,7 +12,7 @@ def skill_report():
     return {
         'actions': {
             'open_app': 'ready; requested app must be on PATH',
-            'run_terminal': 'ready; asks for confirmation',
+            'run_terminal': 'ready; follows the current session approval setting',
             'create_file': 'ready; refuses overwrite',
             'read_file': 'ready; excludes credential files',
             'edit_file': 'ready; exact replacement with backup and confirmation',

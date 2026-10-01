@@ -37,8 +37,9 @@ def choose_mode() -> str:
     print("  3) Web chat")
     print("  4) Approval settings")
     print("  5) Memory")
+    print("  6) TV mode — setup, start or stop")
     choice = input("> ").strip()
-    return {"1": "text", "2": "voice", "3": "web", "4": "approval", "5": "memory"}.get(choice, "text")
+    return {"1": "text", "2": "voice", "3": "web", "4": "approval", "5": "memory", "6": "tv"}.get(choice, "text")
 
 
 def choose_approval(session):
@@ -118,6 +119,10 @@ def run_text_mode(provider: str, owner: bool = False, session=None) -> None:
             sys.exit(0)
         if user_input.lower() == "menu":
             return
+        if user_input.lower() == '/tv':
+            from tv_mode import terminal_menu
+            terminal_menu(provider)
+            continue
 
         if user_input.lower() in {"/settings", "settings"}:
             choose_approval(session)
@@ -262,6 +267,11 @@ def main() -> None:
     while True:
         provider = provider or choose_brain()
         mode = mode or choose_mode()
+        if mode == "tv":
+            from tv_mode import terminal_menu
+            terminal_menu(provider)
+            mode = None
+            continue
         if mode == "approval":
             choose_approval(session)
             mode = None

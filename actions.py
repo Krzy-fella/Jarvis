@@ -41,10 +41,7 @@ def kali_tool(tool_name: str, argument_string: str, timeout: int | None = None) 
     except Exception as e:
         return json.dumps({"status": "error", "message": str(e)})
     try:
-        if execution.observed():
-            return execution.run_command(ALLOWED_TOOLS[tool_name] + safe_args, timeout=timeout)
-        result = subprocess.run(ALLOWED_TOOLS[tool_name] + safe_args, capture_output=True, text=True, timeout=timeout)
-        return json.dumps({"status": "completed" if result.returncode == 0 else "warning", "exit_code": result.returncode, "stdout": result.stdout.strip(), "stderr": result.stderr.strip()}, indent=2)
+        return execution.run_command(ALLOWED_TOOLS[tool_name] + safe_args, timeout=timeout)
     except Exception as e:
         return json.dumps({"status": "exception", "message": str(e)}, indent=2)
 
@@ -60,15 +57,14 @@ def run_terminal(command: str, background: bool = False, timeout: int | None = N
     timeout = config.TOOL_TIMEOUT if timeout is None else timeout
     if not isinstance(command, str) or not command.strip():
         raise ValueError("command must be a nonempty string")
+    if not isinstance(background, bool):
+        raise ValueError("background must be a boolean")
     if not is_command_safe(command):
         raise UnsafeCommandError("Command matches a destructive-command pattern.")
     if background:
         process = subprocess.Popen(command, shell=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
         return f"Started background process {process.pid}; output is discarded."
-    if execution.observed():
-        return execution.run_command(command, shell=True, timeout=timeout)
-    res = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
-    return json.dumps({"exit_code": res.returncode, "stdout": res.stdout[-12000:], "stderr": res.stderr[-12000:]})
+    return execution.run_command(command, shell=True, timeout=timeout)
 
 def research(query: str, max_results: int = 5) -> str:
     from web_research import research as search

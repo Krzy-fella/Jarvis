@@ -11,7 +11,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
 
 import brain
 import execution
@@ -57,6 +58,16 @@ class OpenChat(BaseModel):
 class ChatOperation(BaseModel):
     ids: list[str] = Field(min_length=1, max_length=500)
     action: str
+
+
+class TVSettings(BaseModel):
+    model_config = ConfigDict(extra='forbid', strict=True)
+    action: Literal['start', 'stop']
+    mode: Literal['preview', 'https'] = 'preview'
+    host: str = Field(default='', max_length=64)
+    port: int = Field(default=8766, ge=1024, le=65535)
+    certfile: str = Field(default='', max_length=1024)
+    keyfile: str = Field(default='', max_length=1024)
 
 
 def create_app(provider='ollama', owner=False, token=None, host='127.0.0.1:8765', on_switch=None, session=None):
@@ -112,15 +123,6 @@ def create_app(provider='ollama', owner=False, token=None, host='127.0.0.1:8765'
 
     @app.middleware('http')
     async def protect(request: Request, call_next):
-        if request.headers.get('host') != host:
-            return JSONResponse({'detail': 'Invalid host'}, status_code=403)
-        origin = request.headers.get('origin')
-        if origin and origin != 'http://' + host:
-            return JSONResponse({'detail': 'Cross-origin requests are blocked'}, status_code=403)
-        if request.url.path.startswith('/api/'):
-            provided = request.headers.get('x-jarvis-token', '')
-            if not secrets.compare_digest(provided.encode(), token.encode()):
-                return JSONResponse({'detail': 'Open the launch link from your terminal to connect.'}, status_code=401)
         response = await call_next(request)
         response.headers['Cache-Control'] = 'no-store'
         response.headers['Referrer-Policy'] = 'no-referrer'
@@ -263,6 +265,21 @@ def create_app(provider='ollama', owner=False, token=None, host='127.0.0.1:8765'
         with lock:
             return copy.deepcopy(state)
 
+    @app.get('/api/tv')
+    def tv_status():
+        from tv_mode import controller
+        return controller.status()
+
+    @app.post('/api/tv')
+    def tv_control(body: TVSettings):
+        from tv_mode import controller
+        try:
+            if body.action == 'stop':
+                return controller.stop()
+            return controller.start(provider=provider, **body.model_dump(exclude={'action'}))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+
     @app.post('/api/message', status_code=202)
     def message(body: Message):
         nonlocal active_execution
@@ -376,6 +393,8 @@ def create_app(provider='ollama', owner=False, token=None, host='127.0.0.1:8765'
             on_switch(body.mode)
         return {'mode': body.mode}
 
+    from local_security import LocalGuard
+    app.add_middleware(LocalGuard, hosts={host}, token=token)
     return app
 
 

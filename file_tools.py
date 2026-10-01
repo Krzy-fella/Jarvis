@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import shutil
 import tempfile
+import stat
 
 MAX_FILE_BYTES = 1_000_000
 
@@ -21,9 +22,15 @@ def _path(path):
 
 def read_file(path):
     target = _path(path)
-    if target.stat().st_size > MAX_FILE_BYTES:
-        raise ValueError('File is too large (maximum 1 MB).')
-    return target.read_text(encoding='utf-8')
+    # Nonblocking open prevents a FIFO/device from hanging the assistant forever.
+    descriptor = os.open(target, os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_NOFOLLOW', 0))
+    with os.fdopen(descriptor, 'rb') as stream:
+        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+            raise ValueError('Only regular text files can be read.')
+        content = stream.read(MAX_FILE_BYTES + 1)
+        if len(content) > MAX_FILE_BYTES:
+            raise ValueError('File is too large (maximum 1 MB).')
+    return content.decode('utf-8')
 
 
 def create_file(path, content):
@@ -48,9 +55,9 @@ def edit_file(path, old_text, new_text):
     if len(updated.encode('utf-8')) > MAX_FILE_BYTES:
         raise ValueError('Edited file would exceed 1 MB.')
     backup = target.with_name(target.name + '.jarvis.bak')
-    with backup.open('x', encoding='utf-8') as stream:
+    descriptor = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, target.stat().st_mode & 0o777)
+    with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
         stream.write(content)
-    os.chmod(backup, target.stat().st_mode & 0o777)
     temporary = None
     try:
         with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=target.parent, delete=False) as stream:

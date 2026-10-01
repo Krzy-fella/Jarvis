@@ -38,14 +38,17 @@ class BrainError(Exception):
     """Raised when a provider call fails after retries."""
 
 
-def _safe_parse_json(raw_text: str, *, conversation_only: bool = False) -> dict:
+def _safe_parse_json(raw_text: str, *, conversation_only: bool = False, _depth: int = 0) -> dict:
     """Keep the transport envelope out of chat; never execute a repaired action."""
     text = raw_text.strip()
     none = {"tool": "none", "args": {}}
+    if len(text) > 128000 or _depth > 4:
+        return {'speak': 'The response was too large or deeply nested. Please try a shorter request.', 'action': none}
+    envelope = re.sub(r'^```(?:json)?\s*\n?|\n?```$', '', text).strip()
     decoder = json.JSONDecoder()
     for match in re.finditer(r'\{', text):
         try:
-            parsed, _ = decoder.raw_decode(text[match.start():])
+            parsed, end = decoder.raw_decode(text[match.start():])
         except ValueError:
             continue
         if not isinstance(parsed, dict) or not ({'speak', 'action'} & parsed.keys()):
@@ -60,9 +63,12 @@ def _safe_parse_json(raw_text: str, *, conversation_only: bool = False) -> dict:
             return {'speak': speech, 'action': {'tool': 'satellite_blocked', 'args': {}}}
         if not isinstance(action, dict) or not isinstance(action.get('args', {}), dict) or not isinstance(action.get('tool', 'none'), str) or action.get('tool', 'none') not in config.AVAILABLE_TOOLS:
             action = none
+        # A JSON example embedded in prose must not become an executable action.
+        if text[match.start():match.start()+end] != envelope:
+            action = none
         # Some models put another envelope inside speak. Show its text only.
         if re.match(r'^\s*(?:```(?:json)?\s*)?\{\s*"speak"\s*:', speech):
-            speech = _safe_parse_json(speech)['speak']
+            speech = _safe_parse_json(speech, _depth=_depth + 1)['speak']
         return {'speak': speech, 'action': {'tool': action.get('tool', 'none'), 'args': action.get('args', {})}}
     if re.search(r'["\'](?:speak|action)["\']\s*:', text) or text in {'null', '[]', '42'}:
         # Recover only a complete JSON string; malformed actions stay disabled.

@@ -95,3 +95,25 @@ against machine-wide failures. Satellite and normal JARVIS share an OS account,
 hardware and provider quotas. A compromised host, disk exhaustion, OS failure or
 provider outage can affect both. Review/test the feature before wider deployment;
 see the beta guide for constraints and prerequisites for future PC control.
+
+## October 2026 review changes
+
+Normal web chat now bounds HTTP request bodies to 128 KiB before parsing, rejects
+ambiguous authority/authentication headers, compressed bodies and non-JSON POST
+bodies. The 3D viewer also validates local Host and Origin, including WebSocket
+handshakes, to block cross-origin access and DNS rebinding. Same-account local
+processes can still access the viewer; it does not execute commands or serve private
+files. Loopback services are not multi-user security boundaries.
+
+TV start/stop administration exists only in the authenticated loopback PC API and
+terminal menu. Starting explicitly opts in for this session. It launches the
+restricted server in a child process; it never publishes the PC tool API to LAN.
+Pairing codes stay in process memory and are returned only to the authenticated PC
+panel. UI HTTPS setup does not offer insecure LAN binding; PC preview is loopback.
+
+Only a complete provider JSON envelope (optionally fenced) can request an action.
+JSON examples embedded in prose are display-only. Special-file reads are rejected;
+regular reads are bounded even when files grow. Foreground commands use bounded
+output collection in all interfaces, and POSIX timeout/interruption kills the
+foreground process group. Explicit detached/background work remains separate.
+These protections do not turn shell execution or auto-approval into a sandbox.
