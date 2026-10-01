@@ -19,6 +19,7 @@ def main():
     if not environment.exists():
         venv.EnvBuilder(with_pip=True).create(environment)
     python = environment / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    subprocess.run([str(python), '-m', 'pip', 'install', '--upgrade', 'pip>=26.2'], check=True)
     subprocess.run([str(python), '-m', 'pip', 'install', '-r', str(root / 'requirements.txt')], check=True)
     if options.voice:
         subprocess.run([str(python), '-m', 'pip', 'install', '-r', str(root / 'requirements-voice.txt')], check=True)
