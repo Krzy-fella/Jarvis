@@ -41,6 +41,8 @@ def bound_socket(settings):
     family = socket.AF_INET6 if ':' in settings.host else socket.AF_INET
     sock = socket.socket(family,socket.SOCK_STREAM)
     try:
+        if os.name == 'posix':
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if family == socket.AF_INET6:
             sock.setsockopt(socket.IPPROTO_IPV6,socket.IPV6_V6ONLY,1)
         sock.bind((settings.host,settings.port))
@@ -51,7 +53,7 @@ def bound_socket(settings):
         raise SatelliteError('Could not bind the selected address/port. Check that the IP belongs to this PC and the port is free.') from exc
 
 
-def serve(settings, provider):
+def serve(settings, provider, on_ready=None):
     # Imports stay here so missing web dependencies cannot affect ordinary text mode.
     import uvicorn
     from .server import create_app, WEB_ROOT
@@ -83,8 +85,18 @@ def serve(settings, provider):
         if settings.insecure_http:
             print('[satellite beta] INSECURE HTTP: local network observers can read chats and device credentials. Use only a trusted LAN; prefer HTTPS.')
         # Deliberate one-time terminal display, not a log or an HTTP response.
-        print(f'\nPairing code (one use, expires in 5 minutes):\n{pairing.issue()}')
+        code = pairing.issue()
+        print(f'\nPairing code (one use, expires in 5 minutes):\n{code}')
         print('\nOpen the address on your TV on the same network and enter the code.\nRestart this server for another pairing code. Press Ctrl+C to stop Satellite Beta.\n',flush=True)
+        if on_ready:
+            import threading
+            import time
+            def notify_ready():
+                while not server.started and not server.should_exit:
+                    time.sleep(.05)
+                if server.started:
+                    on_ready(settings.origin, code)
+            threading.Thread(target=notify_ready, daemon=True).start()
         try:
             server.run(sockets=[sock])
         except KeyboardInterrupt:
