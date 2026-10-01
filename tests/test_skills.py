@@ -96,7 +96,7 @@ class SearchTests(unittest.TestCase):
 class InventoryTests(unittest.TestCase):
     def test_terminal_and_kali_use_requested_timeout(self):
         import subprocess
-        with patch('actions.config.TOOL_TIMEOUT', 3830), patch('actions.subprocess.run', return_value=subprocess.CompletedProcess([], 0, '', '')) as run:
+        with patch('actions.config.TOOL_TIMEOUT', 3830), patch('actions.execution.run_command', return_value='{}') as run:
             actions.run_terminal('printf hello')
             self.assertEqual(run.call_args.kwargs['timeout'], 3830)
             with patch('actions.shutil.which', return_value='/fake/nmap'):

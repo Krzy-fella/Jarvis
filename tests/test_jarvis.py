@@ -103,17 +103,17 @@ class RenderTests(unittest.TestCase):
         render_server._connected_clients.clear()
 
     def test_index_and_invalid_scene(self):
-        with TestClient(render_server.app) as client:
+        with TestClient(render_server.app, base_url='http://127.0.0.1:8000') as client:
             self.assertEqual(client.get('/').status_code, 200)
             self.assertEqual(client.post('/scene', json={'shape': 'bad', 'size': -1}).status_code, 422)
 
     def test_websocket_broadcast_and_late_viewer(self):
         scene = {'shape': 'sphere', 'color': '#123abc', 'size': 2}
-        with TestClient(render_server.app) as client:
-            with client.websocket_connect('/ws') as websocket:
+        with TestClient(render_server.app, base_url='http://127.0.0.1:8000') as client:
+            with client.websocket_connect('ws://127.0.0.1:8000/ws') as websocket:
                 self.assertEqual(client.post('/scene', json=scene).json()['clients'], 1)
                 self.assertEqual(websocket.receive_json(), scene)
-            with client.websocket_connect('/ws') as websocket:
+            with client.websocket_connect('ws://127.0.0.1:8000/ws') as websocket:
                 self.assertEqual(websocket.receive_json(), scene)
         self.assertEqual(render_server._connected_clients, [])
 
