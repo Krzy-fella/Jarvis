@@ -28,8 +28,9 @@ point catches startup errors, including Uvicorn startup exits, and identifies th
 as beta failures. A port/certificate/bind/dependency failure exits the standalone
 Satellite command with status 1; it does not stop another normal JARVIS process.
 Existing voice, actions, execution, memory and chat-store behavior is unchanged.
-The local web server only gains an explicit shared keyboard-history asset route
-for the separately requested Up/Down message recall feature.
+The local web server includes the shared keyboard-history asset and, after the
+October review, authenticated PC-only TV lifecycle controls. The LAN service remains
+separate and has no PC tool dispatch.
 The same provider routing is reused; no second AI implementation or model download.
 
 The additive brain flag uses ContextVars, so a Satellite conversation-only prompt
@@ -37,6 +38,28 @@ cannot leak into simultaneous normal requests. Security does not depend on the
 prompt: `conversation_reply` allows only `action.tool == "none"`, and Satellite
 has no reference to the PC dispatcher. Memory slash commands are narrowly handled
 by the existing Session against a device-specific database/profile.
+
+## Start and stop from normal JARVIS
+
+Open **TV mode · setup & controls** in the PC web menu, or choose **6) TV mode**
+from `jarvis --menu`. During terminal chat, `/tv` opens the same controls. Setup
+instructions appear before the start action. Choose PC preview (loopback only),
+or HTTPS with the PC’s private IP, certificate path and private key path. The key
+contents are never read into a chat or sent to the browser. The certificate must
+be trusted by the TV and match the IP. Enter paths, not key contents.
+
+Start launches an isolated child process using the current provider. The PC-only
+control panel displays the address and pairing code after the server is ready.
+Stop terminates only this managed child; paired-device history remains. Stop then
+start to renew an expired/consumed code. An independently launched Satellite
+process is not adopted or stopped; a conflicting port/data lock produces a clear
+error. Closing the dialog does not stop TV mode. Normal interface switches preserve
+it, and normal JARVIS exit stops it. OS force-kill/power loss cannot run cleanup.
+
+Menu start explicitly opts in for this session without writing `.env`. Standalone
+CLI launch still requires `JARVIS_SATELLITE_ENABLED=true`. The LAN Satellite API
+has no TV administration routes; the PC controls require the private local web
+token. Codes are not placed in conversation history, AI context or files.
 
 ## Install and enable
 
