@@ -313,3 +313,45 @@ function dismissExecution() {
 }
 $('close-execution').addEventListener('click', dismissExecution);
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && selectedExecution) dismissExecution(); });
+
+// PC-only TV setup; these credentials never enter a conversation or the LAN API.
+let tvTimer = null, tvRequest = false, tvError = '';
+function renderTV(state) {
+  $('tv-setup').textContent = state.setup;
+  $('tv-steps').replaceChildren(...(state.setup_steps || []).map(text => { const item = document.createElement('li'); item.textContent = text; return item; }));
+  $('tv-note').textContent = state.setup_note || '';
+  $('tv-status').textContent = 'TV mode: ' + state.status;
+  $('tv-address').textContent = state.origin ? 'Open address: ' + state.origin : '';
+  $('tv-code').textContent = state.status === 'running' ? (state.code ? 'Pairing code: ' + state.code + ' · valid once, for five minutes' : 'Pairing code expired. Stop and start for another code.') : '';
+  $('tv-error').textContent = tvError || state.error || '';
+  const active = ['starting', 'running'].includes(state.status);
+  $('tv-start').disabled = active || tvRequest;
+  $('tv-stop').disabled = !active || tvRequest;
+  for (const id of ['tv-mode', 'tv-host', 'tv-port', 'tv-cert', 'tv-key']) $(id).disabled = active || tvRequest;
+}
+async function refreshTV() {
+  clearTimeout(tvTimer);
+  if (!$('tv-dialog').open) return;
+  try { renderTV(await api('tv')); } catch (error) { $('tv-error').textContent = error.message; }
+  if ($('tv-dialog').open) tvTimer = setTimeout(refreshTV, 1500);
+}
+$('tv-menu').addEventListener('click', () => {
+  $('interface-menu').hidden = true;
+  $('tv-start').disabled = true;
+  $('tv-dialog').showModal(); refreshTV();
+});
+$('tv-mode').addEventListener('change', () => { $('tv-network').hidden = $('tv-mode').value !== 'https'; });
+$('tv-close').addEventListener('click', () => $('tv-dialog').close());
+$('tv-dialog').addEventListener('close', () => { clearTimeout(tvTimer); $('tv-key').value = ''; $('tv-menu').focus(); });
+async function changeTV(action) {
+  if (tvRequest) return;
+  tvError = ''; tvRequest = true; $('tv-start').disabled = $('tv-stop').disabled = true;
+  try {
+    const body = action === 'stop' ? {action} : {action, mode: $('tv-mode').value, host: $('tv-host').value, port: Number($('tv-port').value), certfile: $('tv-cert').value, keyfile: $('tv-key').value};
+    await api('tv', body);
+  } catch (error) { tvError = error.message; $('tv-error').textContent = tvError; tvRequest = false; $('tv-start').disabled = false; return; }
+  finally { tvRequest = false; }
+  refreshTV();
+}
+$('tv-form').addEventListener('submit', event => { event.preventDefault(); changeTV('start'); });
+$('tv-stop').addEventListener('click', () => changeTV('stop'));

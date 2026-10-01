@@ -20,7 +20,7 @@
 </aside>
 <main class="workspace glass">
 <header><div><span class="eyebrow">WORKSPACE</span><h2><span id="chat-title">New conversation</span> <span class="pill">Saved locally</span></h2></div><div class="header-actions"><button id="toggle-chats" class="icon-button" aria-label="Show saved chats" aria-expanded="false">◫</button><span class="connection"><i class="online-dot"></i><span id="connection">Connecting</span></span><button id="menu-button" class="icon-button" aria-label="Open interface menu" aria-expanded="false">☰</button></div>
-<div id="interface-menu" class="menu glass" hidden><strong>Your workspace</strong><button id="menu-new-chat">New conversation</button><button id="menu-skills">My capabilities</button><button data-mode="text">Terminal chat <span>↗</span></button><button data-mode="menu">Provider & voice menu <span>↗</span></button><div class="settings-section"><label for="approval-mode">Approval settings</label><select id="approval-mode"><option value="auto">Approve all commands in this session</option><option value="ask" selected>Seek my approval for all commands</option></select><small>Automatic approval lasts until JARVIS closes.</small></div><button id="show-memory">View saved memory</button><button id="forget-memory">Forget saved memory…</button><button id="toggle-speech" aria-pressed="false">Read replies aloud: off</button><button data-mode="exit">Quit JARVIS</button></div></header>
+<div id="interface-menu" class="menu glass" hidden><strong>Your workspace</strong><button id="menu-new-chat">New conversation</button><button id="menu-skills">My capabilities</button><button data-mode="text">Terminal chat <span>↗</span></button><button data-mode="menu">Provider & voice menu <span>↗</span></button><div class="settings-section"><label for="approval-mode">Approval settings</label><select id="approval-mode"><option value="auto">Approve all commands in this session</option><option value="ask" selected>Seek my approval for all commands</option></select><small>Automatic approval lasts until JARVIS closes.</small></div><button id="tv-menu">TV mode · setup & controls</button><button id="show-memory">View saved memory</button><button id="forget-memory">Forget saved memory…</button><button id="toggle-speech" aria-pressed="false">Read replies aloud: off</button><button data-mode="exit">Quit JARVIS</button></div></header>
 <section id="scroll-area" class="scroll-area" aria-label="Conversation">
 <div id="welcome" class="welcome"><div class="orb-wrap"><div class="orb"></div><div class="orb-ring"></div></div><div class="eyebrow">A LITTLE CLARITY. A LOT OF POSSIBILITY.</div><h1>What’s on your mind?</h1><p>A space to explore ideas, get things done,<br>and make sense of what’s next.</p><div class="suggestions"><button data-prompt="Explain machine learning from the ground up."><span class="suggestion-icon">✧</span><strong>Explore an idea</strong><small>Make something complex feel simple</small><span class="arrow">↗</span></button><button data-prompt="Check which of your skills are ready to use on my computer."><span class="suggestion-icon">⌘</span><strong>Get something done</strong><small>Put your assistant to work</small><span class="arrow">↗</span></button></div></div>
 <div id="messages" aria-live="polite" aria-relevant="additions"></div>
@@ -50,4 +50,20 @@
   <button role="menuitem" id="context-delete" class="danger">Delete selected chats…</button>
 </div>
 <dialog id="delete-dialog"><form method="dialog"><h2>Delete conversations?</h2><p id="delete-description"></p><p>This removes their saved messages and linked recent memory. Saved notes remain.</p><div class="dialog-actions"><button value="cancel">Cancel</button><button id="confirm-delete" value="delete" class="danger">Delete chats</button></div></form></dialog>
+<dialog id="tv-dialog" aria-labelledby="tv-heading">
+<form id="tv-form">
+  <h2 id="tv-heading">TV mode <span class="pill">Experimental</span></h2>
+  <p id="tv-setup"></p><ol id="tv-steps"></ol><p id="tv-note"></p>
+  <label for="tv-mode">Connection</label><select id="tv-mode"><option value="preview">Preview on this PC only</option><option value="https">Connect a TV over HTTPS</option></select>
+  <div id="tv-network" hidden>
+    <label for="tv-host">This PC’s private network IP</label><input id="tv-host" placeholder="192.168.1.25" maxlength="64">
+    <label for="tv-cert">Trusted certificate path on this PC</label><input id="tv-cert" placeholder="/absolute/path/to/satellite.crt" maxlength="1024">
+    <label for="tv-key">Private key path on this PC</label><input id="tv-key" placeholder="/absolute/path/to/satellite.key" maxlength="1024">
+    <small>Enter file paths only. Never paste the certificate key contents. Your TV must trust the certificate.</small>
+  </div>
+  <label for="tv-port">Port</label><input id="tv-port" type="number" min="1024" max="65535" value="8766" required>
+  <p id="tv-status" role="status">Checking TV mode…</p>
+  <p id="tv-address"></p><p id="tv-code"></p><p id="tv-error" role="alert"></p>
+  <div class="dialog-actions"><button type="button" id="tv-close">Close</button><button type="button" id="tv-stop">Stop TV mode</button><button type="submit" id="tv-start" class="primary">Start TV mode</button></div>
+</form></dialog>
 </body></html>
